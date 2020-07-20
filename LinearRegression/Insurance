@@ -1,0 +1,98 @@
+#R scipt by : Saurabh Parab
+
+#import data into dataframe
+setwd("E:/R MODEL")
+data <- read.csv("insurance.csv")
+head(data)
+View(data)
+summary(data)
+
+#Converting Categorical data into numerical data by dummy varibale way
+data$sex<-ifelse(data$sex=="male",1,0)
+data$smoker<-ifelse(data$smoker=="yes",1,0)
+head(data)
+summary(data)
+
+#checking the datatypes of the varaibles
+str(data)
+
+#removing the original varibale 
+final_data <- data[ -c(6) ]
+summary(final_data)
+head(final_data)
+View(final_data)
+
+#Randomness
+set.seed(555)
+
+#Outlier Detection
+par(mfrow=c(1,2))
+bx = boxplot(final_data$age)
+tx=boxplot(final_data$bmi)
+quantile(final_data$bmi, seq(0,1,0.02))
+tx$stats
+final_data$bmi<-ifelse(final_data$bmi>=46.75,46.75,final_data$bmi)
+boxplot(final_data$bmi)
+boxplot(final_data$children)
+hist(final_data$charges, main = 'Dependent')
+#boxplot for the dependent 
+boxplot(final_data$charges)
+library(car)
+#scatter plot age vs charges
+scatterplot(final_data$age,final_data$charges)
+#scatter plot bmi vs charges
+scatterplot(final_data$bmi,final_data$charges)
+#scatter plot smoker vs charges
+scatterplot(final_data$smoker,final_data$charges)
+
+#Correlation
+cor(final_data)
+
+final_data1<- lm(charges~.,data=final_data)
+
+vif(final_data1)
+summary(final_data1)
+final_data2 <- lm(charges~age + bmi + children + smoker,data=final_data)
+summary(final_data2)
+step(final_data2)
+plot(final_data2)
+#1 - Autocorrelation
+
+durbinWatsonTest(final_data2)
+#2 - Normality of errors
+
+hist(residuals(final_data2))
+#3 - Homoscedasticity
+
+plot(final_data$charges, residuals(final_data2))
+#Checking the cook's distance
+library(predictmeans)
+
+cooksd=CookD(final_data2)
+summary(final_data2)
+
+# Create Training and Test data -
+set.seed(100)  # setting seed to reproduce results of random sampling
+0.7*nrow(final_data) #imp train data
+0.3*nrow(final_data) #test data
+t <- sample(1:nrow(final_data), 0.8*nrow(final_data))  # row indices for training data
+trainingData <- final_data[t, ]  # model training data
+testData  <- final_data[-t, ]   # test data
+lmMod <- lm(charges~age + bmi + children + smoker, data=trainingData)
+# build the model
+distPred <- predict(lmMod, testData)  # predict
+summary(lmMod)
+actuals_preds <- data.frame(cbind(actuals=testData$charges, predicteds=distPred))  # make actuals_predicteds dataframe.
+correlation_accuracy <- cor(actuals_preds)
+head(actuals_preds)
+library(DMwR)
+DMwR::regr.eval(actuals_preds$actuals, actuals_preds$predicteds)
+predict(lmMod, data.frame(age = 19,bmi = 27.900,children = 0,smoker = 1)) #impppppppppppppppppppppppppppp
+trainingData$charges=predict(lmMod,newdata=trainingData,type = "response")
+View(trainingData)
+testData$charges= predict(lmMod, testData, type="response")
+View(testData)
+AIC(final_data2)
+AIC(lmMod)
+BIC(final_data2)
+BIC(lmMod)
