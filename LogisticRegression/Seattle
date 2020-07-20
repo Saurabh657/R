@@ -1,0 +1,91 @@
+#R Script by : Saurabh Parab
+
+library(tidyverse)
+library(boot)
+library(forecast)
+library(tseries) 
+library(caret)
+library(ROCR)
+
+data.df <- read.csv("Seattle.csv", header = TRUE)
+head(data.df)
+tail(data.df)
+
+#Checking the dataTypes of the datasets
+str(data.df)
+
+#Converting the datatypes
+data.df$DATE <- as.Date(data.df$DATE)
+data.df$RAIN <- as.factor(data.df$RAIN)
+
+which(is.na(data.df$RAIN))# 18416 18417 21068
+
+# Remove the rows with missing RAIN value
+data.df <- data.df[-c(18416, 18417, 21068),]
+
+which(is.na(data.df$TMAX))
+# No NAs
+which(is.na(data.df$TMIN))
+# No NAs
+
+#Now checking for Outliers
+bx = boxplot(data.df$PRCP)
+bx$stats
+quantile(data.df$PRCP, seq(0,1,0.02))
+
+data.df$PRCP<-ifelse(data.df$PRCP>=0.64,0.64,data.df$PRCP)
+bx = boxplot(data.df$PRCP)
+
+bx = boxplot(data.df$TMAX)
+quantile(data.df$TMAX, seq(0,1,0.01))
+data.df$TMAX<-ifelse(data.df$TMAX<=34,34,data.df$TMAX)
+data.df$TMAX<-ifelse(data.df$TMAX>=89,89,data.df$TMAX)
+bx = boxplot(data.df$TMAX)
+
+
+bx = boxplot(data.df$TMIN)
+quantile(data.df$TMIN, seq(0,1,0.01))
+data.df$TMIN<-ifelse(data.df$TMIN<=23,23,data.df$TMIN)
+bx = boxplot(data.df$TMIN)
+
+#lets divide the data into test and train
+set.seed(222)  #for randomness
+t=sample(1:nrow(data.df),0.7*nrow(data.df))
+t_train=data.df[t,]
+t_test=data.df[-t,]
+
+#making the model
+model <- glm(RAIN ~ TMAX + TMIN, data = t_train, family = binomial)
+summary(model)
+
+predicted_values <- predict(model, t_test[,-5], type = "response")
+head(predicted_values)
+
+table(t_test$RAIN)
+nrows_prediction<-nrow(t_test)
+#FALSE  TRUE 
+# 4394  3270  = 7664
+#4394 + 3270  = 7664
+
+prediction <- data.frame(c(1:nrows_prediction))
+colnames(prediction) <- c("RAIN")
+str(prediction)
+prediction$RAIN <- as.character(prediction$RAIN)
+prediction$RAIN <- "TRUE"
+
+
+prediction$RAIN[ predicted_values < 0.5] <- "FALSE"
+#prediction [predicted_values > 0.5] <- "TRUE"
+prediction$RAIN <- as.factor(prediction$RAIN)
+#Confusion Matrix
+table(prediction$RAIN, t_test$RAIN)
+
+confusionMatrix(prediction$RAIN, t_test$RAIN)
+
+glm.diag.plots(model)
+
+ggplot(t_test, aes(x = t_test$TMAX, y = predicted_values))+
+  geom_point() + # add points
+  geom_smooth(method = "glm", # plot a regression...
+              method.args = list(family = "binomial"))
+
