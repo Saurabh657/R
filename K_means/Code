@@ -1,0 +1,51 @@
+#R script by :Saurabh
+
+setwd("f:/RWORKSPACE")
+cust_data<-read.csv("cluster.csv")
+View(cust_data)
+head(cust_data)
+summary(cust_data)
+cust_data <- cust_data[-c(1)]
+summary(cust_data)
+cust_data_f <- scale(cust_data)
+head(cust_data_f)
+View(cust_data_f)
+dist.res=dist(cust_data_f,method = "euclidean")
+#methods for normalization and standardization
+#normalization   : Xnorm=X-Xmin/Xmax-Xmin
+#standardization : z= x- mu/sd
+hc <- hclust(dist.res,method = "complete")
+
+plot(hc,lables=FALSE,hang=-1)
+rect.hclust(hc,k=3,border=2:3)
+install.packages("vegan")
+library(vegan)
+install.packages("permute")
+library(permute)
+install.packages("lattice")
+library(lattice)
+
+fit <- cascadeKM(scale(cust_data,center = TRUE,scale = TRUE),1,10,iter = 1000)
+plot(fit,sortg = TRUE,grpmts.plot = TRUE)
+calinski.best <- as.numeric(which.max(fit$results[2,]))
+cat("Calinski criterion optimal number of clusters:",calinski.best,"\n")
+#also looking at elbow chart
+mydata <- cust_data
+#determine the optimal clusters size based on within sumof squares
+wss <- (nrow(mydata)-1)*sum(apply(mydata,2,var))
+
+for (i in 2:15) wss[i] <- sum(kmeans(mydata,centers = 1)$withinss)
+
+#plot the elbow chart to determine optimal cluster
+plot(1:15, wss,type = "b",xlab = "Numbers of clusters",ylab = "Within groups sum of squares",col="mediumseagreen",pch=12)
+
+k1 <- kmeans(cust_data_f,2)
+k1
+
+k1$centers
+k1$size
+k1$cluster
+cust_data$cluster=k1$cluster
+View(cust_data)
+
+
