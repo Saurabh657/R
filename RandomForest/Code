@@ -1,0 +1,42 @@
+#Author - Saurabh Parab
+library(randomForest)
+require(caret) 
+library(pROC)
+library(e1071)
+#readdata
+hr_data = read.csv("hrdataset.csv")
+
+#hr_data chose.file()
+
+View(hr_data)
+
+colnames(hr_data)
+summary(hr_data)
+str(hr_data)
+#Removing role & salary as we are using role_code & salary_code as factor is required for categorical data
+hr_data1 = hr_data[,-c(9,10)]
+
+hr_data1$role_code = as.factor(hr_data1$role_code)
+hr_data1$salary.code = as.factor(hr_data1$salary.code)
+View(hr_data1)
+
+summary(hr_data1)
+
+# Creating train and test samples
+set.seed(1234)
+splitIndex <- createDataPartition(hr_data1$left, p = .70,list = FALSE, times = 1)
+trainSplit <- hr_data1[ splitIndex,]
+testSplit <- hr_data1[-splitIndex,]
+print(table(trainSplit$left))
+print(table(testSplit$left))
+
+modelrf <- randomForest(as.factor(left) ~ . , data = trainSplit, do.trace=T)
+modelrf
+
+importance(modelrf)
+#The variable importance plot displays a plot with variables sorted by MeanDecreaseGini
+varImpPlot(modelrf)
+
+### predict
+predrf_tr <- predict(modelrf, trainSplit)
+predrf_test <- predict(modelrf, testSplit)
